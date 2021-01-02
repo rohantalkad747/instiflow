@@ -4,17 +4,19 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @Data
 @AllArgsConstructor
 @Builder
 public class Sweep {
     private String symbol;
-    private List<Trade> trades;
     private double averagePrice;
-    private double strike;
+    private BigDecimal strike;
     private double cashAmount;
+    private long execTime;
+    private Type type;
 
-    public enum Type { INTER_MARKET, SINGLE_MARKET };
+    public enum Type {INTER_MARKET, SINGLE_MARKET}
+
 }
