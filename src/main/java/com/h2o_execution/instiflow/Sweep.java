@@ -14,6 +14,8 @@ public class Sweep {
     private double averagePrice;
     private BigDecimal strike;
     private double cashAmount;
+    private Trade.OptionType optionType;
+    public String expiration;
     private long execTime;
     private Type type;
 

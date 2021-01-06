@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -20,13 +19,14 @@ import java.util.stream.Collectors;
 public class TradeClassifier {
     private final OrderFlowEventsReceiver receiver;
     private final TradeDB tradeDB;
+    private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private final AtomicReference<Set<SweepSignature>> sweepSignatures = new AtomicReference<>(Sets.newHashSet());
 
     private boolean modifySet(Set<SweepSignature> current, Set<SweepSignature> modified) {
         return sweepSignatures.compareAndSet(current, modified);
     }
 
-    public void onTrade(Trade trade) throws InterruptedException {
+    public void onTrade(Trade trade)  {
         if (trade.isBlockTrade()) {
             receiver.newBlockTrade(trade);
         } else {
@@ -38,7 +38,7 @@ public class TradeClassifier {
 
     private boolean canCheckForSweep(Trade trade) {
         for (;;) {
-            SweepSignature sweepSig = new SweepSignature(trade.getSymbol(), trade.getStrike(), trade.getExpiration(), trade.getExecutionSide());
+            SweepSignature sweepSig = new SweepSignature(trade.getSymbol(), trade.getStrike(), trade.getExpiration());
             Set<SweepSignature> current = sweepSignatures.get();
             if (current.contains(sweepSig)) {
                 return false;
@@ -54,7 +54,7 @@ public class TradeClassifier {
 
     private void stopCheckingForSweep(Trade trade) {
         for (; ; ) {
-            SweepSignature sweepSig = new SweepSignature(trade.getSymbol(), trade.getStrike(), trade.getExpiration(), trade.getExecutionSide());
+            SweepSignature sweepSig = new SweepSignature(trade.getSymbol(), trade.getStrike(), trade.getExpiration());
             Set<SweepSignature> current = sweepSignatures.get();
             Set<SweepSignature> modified = Sets.newHashSet(current.iterator());
             modified.remove(sweepSig);
@@ -92,29 +92,22 @@ public class TradeClassifier {
     private void checkForSweep(Trade trade) {
         long sweepStartTs = trade.getExecTime();
         // We do this to find all similar orders
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         Runnable task = () -> {
-            try {
-                Thread.sleep(1000);
-                long sweepEndTs = sweepStartTs + 1000;
-                List<Trade> trades = tradeDB.getTrades(trade.getSymbol(), trade.getExpiration(), trade.getExecutionSide(), trade.getStrike(), sweepStartTs, sweepEndTs);
-                double cashAmount = calcCashAmount(trades);
-                if (qualifiesAsSweep(trades, cashAmount)) {
-                    processSweep(trade, trades, cashAmount);
-                }
-                stopCheckingForSweep(trade);
-                executor.shutdown();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            long sweepEndTs = sweepStartTs + 1000;
+            List<Trade> trades = tradeDB.getTrades(trade.getSymbol(), trade.getExpiration(), trade.getOptionType(), trade.getStrike(), sweepStartTs, sweepEndTs);
+            double cashAmount = calcCashAmount(trades);
+            if (qualifiesAsSweep(trades, cashAmount)) {
+                processSweep(trade, trades, cashAmount);
             }
+            stopCheckingForSweep(trade);
         };
         executor.schedule(task, 1, TimeUnit.MILLISECONDS);
     }
 
-    private void processSweep(Trade trade, List<Trade> trades, double cashAmount) {
+    private void processSweep(Trade baseTrade, List<Trade> trades, double cashAmount) {
         double avgPrice = calcAvgPrice(trades);
         Sweep.Type sweepType = getSweepType(trades);
-        Sweep sweep = buildSweep(trade, sweepType, cashAmount, avgPrice);
+        Sweep sweep = buildSweep(baseTrade, sweepType, cashAmount, baseTrade.getExpiration(), avgPrice);
         receiver.newSweep(sweep);
     }
 
@@ -123,21 +116,23 @@ public class TradeClassifier {
     }
 
     private boolean meetsCashAmountThreshold(double cashAmount) {
-        return cashAmount >= Trade.Size.EXTRA_SMALL.amount;
+        return cashAmount >= Trade.Size.SMALL.amount;
     }
 
     private boolean childrenExist(List<Trade> trades) {
         return trades.size() > 1;
     }
 
-    private Sweep buildSweep(Trade trade, Sweep.Type sweepType, double cashAmount, double avgPrice) {
+    private Sweep buildSweep(Trade baseTrade, Sweep.Type sweepType, double cashAmount,String expiration, double avgPrice) {
         return new Sweep.SweepBuilder()
                 .averagePrice(avgPrice)
                 .cashAmount(cashAmount)
                 .type(sweepType)
-                .strike(trade.getStrike())
-                .execTime(trade.getExecTime())
-                .symbol(trade.getSymbol())
+                .optionType(baseTrade.getOptionType())
+                .strike(baseTrade.getStrike())
+                .expiration(expiration)
+                .execTime(baseTrade.getExecTime())
+                .symbol(baseTrade.getSymbol())
                 .build();
     }
 
@@ -147,6 +142,5 @@ public class TradeClassifier {
         private String symbol;
         private BigDecimal strike;
         private String expiration;
-        private Trade.Side side;
     }
 }

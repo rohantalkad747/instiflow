@@ -15,13 +15,13 @@ public class TradeProcessorTest {
 
     @Test
     void testOnTrade() throws InterruptedException {
-        for (int i = 1; i < 10; i++) {
+        for (int i = 1; i < 8; i++) {
             Trade blockTrade = Trade.builder()
                     .exchange("CHIX" + i)
                     .execTime(new Date().getTime())
                     .price(12.35)
+                    .optionType(Trade.OptionType.CALL)
                     .expiration("01-08-21")
-                    .executionSide(Trade.Side.BUY)
                     .quantity(500)
                     .strike(BigDecimal.valueOf(125.50))
                     .symbol("AAPL")
