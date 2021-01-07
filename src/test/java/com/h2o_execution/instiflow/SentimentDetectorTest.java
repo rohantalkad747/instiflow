@@ -54,8 +54,6 @@ class SentimentDetectorTest {
         assertThat(sentiment, equalTo(Sentiment.VERY_BULLISH));
     }
 
-    // puts
-
     @Test
     void whenPutAtBid_ThenShouldReturnBullishSentiment() {
         Sweep sweep = sweepBuilder.optionType(Trade.OptionType.PUT).averagePrice(124).build();
@@ -78,7 +76,7 @@ class SentimentDetectorTest {
     }
 
     @Test
-    void whenCallAboveAsk_ThenShouldReturnVeryBearishSentiment() {
+    void whenPutAboveAsk_ThenShouldReturnVeryBearishSentiment() {
         Sweep sweep = sweepBuilder.optionType(Trade.OptionType.PUT).averagePrice(126).build();
         Sentiment sentiment = sentimentDetector.getSentiment(sweep);
         assertThat(sentiment, equalTo(Sentiment.VERY_BEARISH));
