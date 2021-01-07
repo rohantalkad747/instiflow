@@ -17,8 +17,8 @@ public class Sweep {
     private Trade.OptionType optionType;
     public String expiration;
     private long execTime;
-    private Type type;
+    private ExecutionType type;
 
-    public enum Type {INTER_MARKET, SINGLE_MARKET}
+    public enum ExecutionType {INTER_MARKET, SINGLE_MARKET}
 
 }

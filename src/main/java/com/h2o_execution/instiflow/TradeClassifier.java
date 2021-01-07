@@ -81,12 +81,12 @@ public class TradeClassifier {
         return amt;
     }
 
-    private Sweep.Type getSweepType(List<Trade> trades) {
+    private Sweep.ExecutionType getSweepType(List<Trade> trades) {
         Set<String> exchanges = trades.stream().map(Trade::getExchange).collect(Collectors.toSet());
         if (exchanges.size() == 1) {
-            return Sweep.Type.SINGLE_MARKET;
+            return Sweep.ExecutionType.SINGLE_MARKET;
         }
-        return Sweep.Type.INTER_MARKET;
+        return Sweep.ExecutionType.INTER_MARKET;
     }
 
     private void checkForSweep(Trade trade) {
@@ -106,8 +106,8 @@ public class TradeClassifier {
 
     private void processSweep(Trade baseTrade, List<Trade> trades, double cashAmount) {
         double avgPrice = calcAvgPrice(trades);
-        Sweep.Type sweepType = getSweepType(trades);
-        Sweep sweep = buildSweep(baseTrade, sweepType, cashAmount, baseTrade.getExpiration(), avgPrice);
+        Sweep.ExecutionType executionType = getSweepType(trades);
+        Sweep sweep = buildSweep(baseTrade, executionType, cashAmount, baseTrade.getExpiration(), avgPrice);
         receiver.newSweep(sweep);
     }
 
@@ -123,11 +123,11 @@ public class TradeClassifier {
         return trades.size() > 1;
     }
 
-    private Sweep buildSweep(Trade baseTrade, Sweep.Type sweepType, double cashAmount,String expiration, double avgPrice) {
+    private Sweep buildSweep(Trade baseTrade, Sweep.ExecutionType executionType, double cashAmount, String expiration, double avgPrice) {
         return new Sweep.SweepBuilder()
                 .averagePrice(avgPrice)
                 .cashAmount(cashAmount)
-                .type(sweepType)
+                .type(executionType)
                 .optionType(baseTrade.getOptionType())
                 .strike(baseTrade.getStrike())
                 .expiration(expiration)

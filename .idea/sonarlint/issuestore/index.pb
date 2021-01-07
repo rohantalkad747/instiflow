@@ -23,3 +23,11 @@ q
 Asrc/test/java/com/h2o_execution/instiflow/TradeProcessorTest.java,2\0\206beb82034637ac70bb7c1dba54d5dd1f245218
 n
 >src/main/java/com/h2o_execution/instiflow/TradeClassifier.java,e\0\e01130bebe0feccb08c8a8276bebf281a5ca77ff
+t
+Dsrc/main/java/com/h2o_execution/instiflow/OrderFlowEventsDBImpl.java,b\b\bb91accb5035fdfc937f1107363e7fad61965a05
+j
+:src/main/java/com/h2o_execution/instiflow/NBBOHistory.java,a\e\ae35211692223f7910b852e80cddfa74d5fd6d8a
+p
+@src/main/java/com/h2o_execution/instiflow/SentimentDetector.java,3\5\35a2d46c5cfb5c1fbb2902badf70fed745548f72
+t
+Dsrc/test/java/com/h2o_execution/instiflow/SentimentDetectorTest.java,3\e\3edf9271ab269590566f12ecbc3df3278625fbdd

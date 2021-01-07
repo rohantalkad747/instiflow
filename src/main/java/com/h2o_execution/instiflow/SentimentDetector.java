@@ -1,5 +1,8 @@
 package com.h2o_execution.instiflow;
 
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor
 public class SentimentDetector {
     private NBBOHistory nbboHistory;
 
