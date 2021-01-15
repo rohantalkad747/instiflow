@@ -14,7 +14,7 @@ public class NBBOHistory {
         private BigDecimal offer;
     }
 
-    public NBBO getNBBO(String symbol, Long timeStamp, Trade.OptionType type, BigDecimal strike, String exp) {
+    public NBBO getNBBO(String symbol, Long timeStamp, Trade.OptionType type, Double strike, String exp) {
         return null;
     }
 }

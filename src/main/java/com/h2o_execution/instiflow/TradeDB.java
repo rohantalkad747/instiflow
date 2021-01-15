@@ -18,7 +18,7 @@ public class TradeDB {
                 .computeIfAbsent(trade.getSymbol(), k -> Maps.newConcurrentMap())
                 .computeIfAbsent(trade.getExpiration(), k -> Lists.newArrayList(Maps.newConcurrentMap(), Maps.newConcurrentMap()))
                 .get(trade.getOptionType() == Trade.OptionType.CALL ? CALL_INDEX : PUT_INDEX)
-                .computeIfAbsent(trade.getStrike(), k -> Lists.newArrayList())
+                .computeIfAbsent(BigDecimal.valueOf(trade.getStrike()), k -> Lists.newArrayList())
                 .add(trade);
     }
 
@@ -29,7 +29,7 @@ public class TradeDB {
                 .get(optionType == Trade.OptionType.CALL ? CALL_INDEX : PUT_INDEX)
                 .get(strike)
                 .stream()
-                .filter(trade -> trade.getExecTime() >= startTs && trade.getExecTime() < endTs)
+                .filter(trade -> trade.getExecTime() >= startTs && trade.getExecTime() <= endTs)
                 .collect(Collectors.toList());
     }
 }

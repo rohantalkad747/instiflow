@@ -36,4 +36,10 @@ dependencies {
 // https://mvnrepository.com/artifact/org.hamcrest/hamcrest-all
     testCompile group: 'org.hamcrest', name: 'hamcrest-all', version: '1.3'
 
+    // https://mvnrepository.com/artifact/org.awaitility/awaitility
+    testCompile group: 'org.awaitility', name: 'awaitility', version: '4.0.3'
+// https://mvnrepository.com/artifact/org.awaitility/awaitility-proxy
+    testCompile group: 'org.awaitility', name: 'awaitility-proxy', version: '3.1.6'
+
+
 }

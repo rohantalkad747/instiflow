@@ -87,7 +87,7 @@ class SentimentDetectorTest {
                 .expiration("1-5-2020")
                 .execTime(new Date().getTime())
                 .symbol("AAPL")
-                .strike(BigDecimal.valueOf(130))
+                .strike(130)
                 .type(Sweep.ExecutionType.INTER_MARKET)
                 .cashAmount(125_000);
     }

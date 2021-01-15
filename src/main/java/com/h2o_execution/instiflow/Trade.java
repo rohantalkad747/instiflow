@@ -15,7 +15,7 @@ public class Trade {
     private final String symbol;
     private final String expiration;
     private final double price;
-    private final BigDecimal strike;
+    private final double strike;
     private final int quantity;
     private final OptionType optionType;
 
@@ -28,7 +28,7 @@ public class Trade {
     }
 
     public enum Size {
-        SMALL(50_000),
+        SMALL(25_000),
         MEDIUM(200_000),
         LARGE(500_000),
         EXTRA_LARGE(1_000_000);

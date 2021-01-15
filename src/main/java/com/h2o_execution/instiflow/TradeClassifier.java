@@ -1,67 +1,39 @@
 package com.h2o_execution.instiflow;
 
 import com.google.common.collect.Sets;
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Slf4j
-@AllArgsConstructor
 public class TradeClassifier {
-    private final OrderFlowEventsReceiver receiver;
+    private final OrderFlowEventsDB receiver;
     private final TradeDB tradeDB;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-    private final AtomicReference<Set<SweepSignature>> sweepSignatures = new AtomicReference<>(Sets.newHashSet());
+    private final Set<SweepSignature> sweepSignatures = Sets.newConcurrentHashSet();
 
-    private boolean modifySet(Set<SweepSignature> current, Set<SweepSignature> modified) {
-        return sweepSignatures.compareAndSet(current, modified);
+    public TradeClassifier(OrderFlowEventsDB receiver, TradeDB tradeDB) {
+        this.receiver = receiver;
+        this.tradeDB = tradeDB;
+        checkForSweeps();
     }
 
-    public void onTrade(Trade trade)  {
+    public void classify(Trade trade)  {
         if (trade.isBlockTrade()) {
             receiver.newBlockTrade(trade);
         } else {
-            if (canCheckForSweep(trade)) {
-                checkForSweep(trade);
-            }
-        }
-    }
-
-    private boolean canCheckForSweep(Trade trade) {
-        for (;;) {
-            SweepSignature sweepSig = new SweepSignature(trade.getSymbol(), trade.getStrike(), trade.getExpiration());
-            Set<SweepSignature> current = sweepSignatures.get();
-            if (current.contains(sweepSig)) {
-                return false;
-            }
-            Set<SweepSignature> modified = Sets.newHashSet(current.iterator());
-            modified.add(sweepSig);
-            if (modifySet(current, modified)) {
-                log.info("Sweeping for " + trade);
-                return true;
-            }
-        }
-    }
-
-    private void stopCheckingForSweep(Trade trade) {
-        for (; ; ) {
-            SweepSignature sweepSig = new SweepSignature(trade.getSymbol(), trade.getStrike(), trade.getExpiration());
-            Set<SweepSignature> current = sweepSignatures.get();
-            Set<SweepSignature> modified = Sets.newHashSet(current.iterator());
-            modified.remove(sweepSig);
-            if (modifySet(current, modified)) {
-                log.info("Done sweeping for " + trade);
-                return;
-            }
+            SweepSignature sweepSignature = new SweepSignature(trade);
+            sweepSignatures.add(sweepSignature);
         }
     }
 
@@ -70,7 +42,7 @@ public class TradeClassifier {
         for (Trade trade : trades) {
             priceSum += trade.getPrice();
         }
-        return priceSum / trades.size();
+        return BigDecimal.valueOf(priceSum / trades.size()).doubleValue();
     }
 
     private double calcCashAmount(List<Trade> trades) {
@@ -89,25 +61,28 @@ public class TradeClassifier {
         return Sweep.ExecutionType.INTER_MARKET;
     }
 
-    private void checkForSweep(Trade trade) {
-        long sweepStartTs = trade.getExecTime();
-        // We do this to find all similar orders
+    private void checkForSweeps() {
         Runnable task = () -> {
-            long sweepEndTs = sweepStartTs + 1000;
-            List<Trade> trades = tradeDB.getTrades(trade.getSymbol(), trade.getExpiration(), trade.getOptionType(), trade.getStrike(), sweepStartTs, sweepEndTs);
-            double cashAmount = calcCashAmount(trades);
-            if (qualifiesAsSweep(trades, cashAmount)) {
-                processSweep(trade, trades, cashAmount);
+            Iterator<SweepSignature> iterator = sweepSignatures.iterator();
+            sweepSignatures.clear();
+            SweepSignature sweepSignature;
+            while (iterator.hasNext()) {
+                sweepSignature = iterator.next();
+                long sweepEndTs = sweepSignature.startTime + 1000;
+                List<Trade> trades = tradeDB.getTrades(sweepSignature.getSymbol(), sweepSignature.getExpiration(), sweepSignature.getOptionType(), sweepSignature.getStrike(), sweepSignature.startTime, sweepEndTs);
+                double cashAmount = calcCashAmount(trades);
+                if (qualifiesAsSweep(trades, cashAmount)) {
+                    processSweep(sweepSignature, trades, cashAmount);
+                }
             }
-            stopCheckingForSweep(trade);
         };
-        executor.schedule(task, 1, TimeUnit.MILLISECONDS);
+        executor.scheduleAtFixedRate(task, 10, 10, TimeUnit.MILLISECONDS);
     }
 
-    private void processSweep(Trade baseTrade, List<Trade> trades, double cashAmount) {
+    private void processSweep(SweepSignature sweepSignature, List<Trade> trades, double cashAmount) {
         double avgPrice = calcAvgPrice(trades);
         Sweep.ExecutionType executionType = getSweepType(trades);
-        Sweep sweep = buildSweep(baseTrade, executionType, cashAmount, baseTrade.getExpiration(), avgPrice);
+        Sweep sweep = buildSweep(sweepSignature, executionType, cashAmount, sweepSignature.getExpiration(), avgPrice);
         receiver.newSweep(sweep);
     }
 
@@ -123,24 +98,35 @@ public class TradeClassifier {
         return trades.size() > 1;
     }
 
-    private Sweep buildSweep(Trade baseTrade, Sweep.ExecutionType executionType, double cashAmount, String expiration, double avgPrice) {
+    private Sweep buildSweep(SweepSignature baseTrade, Sweep.ExecutionType executionType, double cashAmount, String expiration, double avgPrice) {
         return new Sweep.SweepBuilder()
                 .averagePrice(avgPrice)
                 .cashAmount(cashAmount)
                 .type(executionType)
                 .optionType(baseTrade.getOptionType())
-                .strike(baseTrade.getStrike())
+                .strike(baseTrade.getStrike().doubleValue())
                 .expiration(expiration)
-                .execTime(baseTrade.getExecTime())
+                .execTime(baseTrade.getStartTime())
                 .symbol(baseTrade.getSymbol())
                 .build();
     }
 
     @Data
-    @AllArgsConstructor
+    @NoArgsConstructor
     private static class SweepSignature {
+        @EqualsAndHashCode.Exclude
+        private long startTime;
         private String symbol;
+        private Trade.OptionType optionType;
         private BigDecimal strike;
         private String expiration;
+
+        public SweepSignature(Trade trade) {
+            this.startTime = trade.getExecTime();
+            this.symbol = trade.getSymbol();
+            this.optionType = trade.getOptionType();
+            this.strike = BigDecimal.valueOf(trade.getStrike());
+            this.expiration = trade.getExpiration();
+        }
     }
 }
