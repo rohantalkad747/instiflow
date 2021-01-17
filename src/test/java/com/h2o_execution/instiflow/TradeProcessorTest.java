@@ -16,40 +16,19 @@ class TradeProcessorTest {
 
     TradeDB tradeDB;
     OrderFlowEventsDB orderFlowEventsDB;
-    TradeClassifier tradeClassifier;
+    SweepDetector sweepDetector;
     TradeProcessor tradeProcessor;
 
     @BeforeEach
     void on() {
         tradeDB = new TradeDB();
         orderFlowEventsDB = new OrderFlowEventsDB();
-        tradeClassifier = new TradeClassifier(orderFlowEventsDB, tradeDB);
-        tradeProcessor = new TradeProcessor(tradeDB, tradeClassifier);
+        sweepDetector = new SweepDetector(orderFlowEventsDB, tradeDB);
+        tradeProcessor = new TradeProcessor(orderFlowEventsDB, tradeDB, sweepDetector);
     }
 
     @Test
     void whenMultipleTradesAreExecutedOnDiffExchangesInLessThanAMillisecond_thenDetectIntermarketSweep()  {
-        simulateIntermarketSweep();
-        await()
-                .atMost(Duration.ofSeconds(1))
-                .until(() -> !orderFlowEventsDB.getSweeps().isEmpty());
-        List<Sweep> sweeps = orderFlowEventsDB.getSweeps();
-        Sweep sweep = sweeps.get(0);
-        Sweep expectedSweep = Sweep.builder()
-                .symbol("AAPL")
-                .averagePrice(12.349999999999996)
-                .strike(125.5)
-                .cashAmount(67925)
-                .optionType(Trade.OptionType.CALL)
-                .expiration("01-08-21")
-                .execTime(sweep.getExecTime())
-                .type(Sweep.ExecutionType.INTER_MARKET)
-                .build();
-        assertThat(sweep, equalTo(expectedSweep));
-    }
-
-    @Test
-    void whenTradeExecutedOver200K_thenDetectBlockTrade()  {
         simulateIntermarketSweep();
         await()
                 .atMost(Duration.ofSeconds(1))
@@ -76,6 +55,8 @@ class TradeProcessorTest {
             Trade childTrade = Trade.builder()
                     .exchange("CHIX" + i)
                     .execTime(execTime + (i * 100))
+                    .bestBid(124)
+                    .bestOffer(125) 
                     .price(12.35)
                     .optionType(Trade.OptionType.CALL)
                     .expiration("01-08-21")
@@ -85,5 +66,33 @@ class TradeProcessorTest {
                     .build();
             tradeProcessor.onTrade(childTrade);
         }
+    }
+
+    @Test
+    void whenTradeExecutedOver200K_thenDetectBlockTrade()  {
+        Trade trade = simulateBlockTrade();
+        await()
+                .atMost(Duration.ofSeconds(1))
+                .until(() -> !orderFlowEventsDB.getSweeps().isEmpty());
+        List<Trade> blocks = orderFlowEventsDB.getBlocks();
+        Trade sweep = blocks.get(0);
+        assertThat(sweep, equalTo(trade));
+    }
+
+    private Trade simulateBlockTrade() {
+        Trade trade = Trade.builder()
+                .exchange("CHIX")
+                .execTime(new Date().getTime())
+                .bestBid(124)
+                .bestOffer(125)
+                .price(12.35)
+                .optionType(Trade.OptionType.CALL)
+                .expiration("01-08-21")
+                .quantity(100_000)
+                .strike(200)
+                .symbol("AAPL")
+                .build();
+        tradeProcessor.onTrade(trade);
+        return trade;
     }
 }

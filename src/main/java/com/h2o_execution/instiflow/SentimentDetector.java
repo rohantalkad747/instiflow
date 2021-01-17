@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class SentimentDetector {
-    private NBBOHistory nbboHistory;
 
     public enum Sentiment {
         BEARISH,
@@ -15,18 +14,14 @@ public class SentimentDetector {
     }
 
     public Sentiment getSentiment(Trade trade) {
-        NBBOHistory.NBBO nbbo = nbboHistory.getNBBO(trade.getSymbol(), trade.getExecTime(), trade.getOptionType(), trade.getStrike(), trade.getExpiration());
-        return evaluateExecPriceComparedtoNBBO(trade.getOptionType(), trade.getPrice(), nbbo);
+        return evaluateExecPriceComparedtoNBBO(trade.getOptionType(), trade.getPrice(), trade.getBestBid(), trade.getBestOffer());
     }
 
     public Sentiment getSentiment(Sweep sweep) {
-        NBBOHistory.NBBO nbbo = nbboHistory.getNBBO(sweep.getSymbol(), sweep.getExecTime(), sweep.getOptionType(), sweep.getStrike(), sweep.getExpiration());
-        return evaluateExecPriceComparedtoNBBO(sweep.getOptionType(), sweep.getAveragePrice(), nbbo);
+        return evaluateExecPriceComparedtoNBBO(sweep.getOptionType(), sweep.getAveragePrice(), sweep.getBestBid(), sweep.getBestOffer());
     }
 
-    private Sentiment evaluateExecPriceComparedtoNBBO(Trade.OptionType optionType, double execPrice, NBBOHistory.NBBO nbbo) {
-        double bestBid = nbbo.getBid().doubleValue();
-        double bestOffer = nbbo.getOffer().doubleValue();
+    private Sentiment evaluateExecPriceComparedtoNBBO(Trade.OptionType optionType, double execPrice, double bestBid, double bestOffer) {
         if (optionType == Trade.OptionType.CALL) {
             return evaluateCallSentiment(bestBid, bestOffer, execPrice);
         }

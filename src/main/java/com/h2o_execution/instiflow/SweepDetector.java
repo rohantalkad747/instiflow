@@ -16,25 +16,21 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class TradeClassifier {
+public class SweepDetector {
     private final OrderFlowEventsDB receiver;
     private final TradeDB tradeDB;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private final Set<SweepSignature> sweepSignatures = Sets.newConcurrentHashSet();
 
-    public TradeClassifier(OrderFlowEventsDB receiver, TradeDB tradeDB) {
+    public SweepDetector(OrderFlowEventsDB receiver, TradeDB tradeDB) {
         this.receiver = receiver;
         this.tradeDB = tradeDB;
         checkForSweeps();
     }
 
-    public void classify(Trade trade)  {
-        if (trade.isBlockTrade()) {
-            receiver.newBlockTrade(trade);
-        } else {
-            SweepSignature sweepSignature = new SweepSignature(trade);
-            sweepSignatures.add(sweepSignature);
-        }
+    public void checkForSweep(Trade trade)  {
+        SweepSignature sweepSignature = new SweepSignature(trade);
+        sweepSignatures.add(sweepSignature);
     }
 
     private double calcAvgPrice(List<Trade> trades) {

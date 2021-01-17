@@ -16,6 +16,8 @@ public class Sweep {
     private String expiration;
     private long execTime;
     private ExecutionType type;
+    private double bestBid;
+    private double bestOffer;
 
     public enum ExecutionType {INTER_MARKET, SINGLE_MARKET}
 

@@ -15,15 +15,8 @@ import static org.mockito.Mockito.when;
 
 class SentimentDetectorTest {
 
-    NBBOHistory hist = mock(NBBOHistory.class);
-    SentimentDetector sentimentDetector = new SentimentDetector(hist);
+    SentimentDetector sentimentDetector = new SentimentDetector();
     Sweep.SweepBuilder sweepBuilder = sampleSweep();
-    NBBOHistory.NBBO nbbo = new NBBOHistory.NBBO(BigDecimal.valueOf(124), BigDecimal.valueOf(125));
-
-    @BeforeEach
-    public void initMocks() {
-        when(hist.getNBBO(any(), any(), any(), any(), any())).thenReturn(nbbo);
-    }
 
 
     @Test

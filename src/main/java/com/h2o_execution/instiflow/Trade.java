@@ -4,8 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 
-import java.math.BigDecimal;
-
 @Data
 @AllArgsConstructor
 @Builder
@@ -18,6 +16,8 @@ public class Trade {
     private final double strike;
     private final int quantity;
     private final OptionType optionType;
+    private double bestBid;
+    private double bestOffer;
 
     public enum OptionType {
         CALL, PUT;

@@ -4,11 +4,16 @@ import lombok.AllArgsConstructor;
 
 @AllArgsConstructor
 public class TradeProcessor {
+    private final OrderFlowEventsDB receiver;
     private final TradeDB tradeDB;
-    private final TradeClassifier tradeClassifier;
+    private final SweepDetector sweepDetector;
 
     public void onTrade(Trade trade) {
-        tradeDB.addTrade(trade);
-        tradeClassifier.classify(trade);
+        if (trade.isBlockTrade()) {
+            receiver.newBlockTrade(trade);
+        } else {
+            tradeDB.addTrade(trade);
+            sweepDetector.checkForSweep(trade);
+        }
     }
 }
