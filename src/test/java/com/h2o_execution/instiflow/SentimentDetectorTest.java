@@ -1,17 +1,12 @@
 package com.h2o_execution.instiflow;
 
 import com.h2o_execution.instiflow.SentimentDetector.Sentiment;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.util.Date;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class SentimentDetectorTest {
 
@@ -79,6 +74,8 @@ class SentimentDetectorTest {
         return Sweep.builder()
                 .expiration("1-5-2020")
                 .execTime(new Date().getTime())
+                .bestBid(124)
+                .bestOffer(125)
                 .symbol("AAPL")
                 .strike(130)
                 .type(Sweep.ExecutionType.INTER_MARKET)
