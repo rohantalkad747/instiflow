@@ -54,7 +54,7 @@ class TradeProcessorTest {
         for (int i = 0; i < 15; i++) {
             Trade childTrade = Trade.builder()
                     .exchange("CHIX" + i)
-                    .execTime(execTime + (i * 100))
+                    .execTime(execTime + i)
                     .bestBid(124)
                     .bestOffer(125) 
                     .price(12.35)
@@ -73,7 +73,7 @@ class TradeProcessorTest {
         Trade trade = simulateBlockTrade();
         await()
                 .atMost(Duration.ofSeconds(1))
-                .until(() -> !orderFlowEventsDB.getSweeps().isEmpty());
+                .until(() -> !orderFlowEventsDB.getBlocks().isEmpty());
         List<Trade> blocks = orderFlowEventsDB.getBlocks();
         Trade sweep = blocks.get(0);
         assertThat(sweep, equalTo(trade));

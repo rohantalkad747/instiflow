@@ -64,7 +64,7 @@ public class SweepDetector {
             SweepSignature sweepSignature;
             while (iterator.hasNext()) {
                 sweepSignature = iterator.next();
-                long sweepEndTs = sweepSignature.startTime + 1000;
+                long sweepEndTs = sweepSignature.startTime + 10;
                 List<Trade> trades = tradeDB.getTrades(sweepSignature.getSymbol(), sweepSignature.getExpiration(), sweepSignature.getOptionType(), sweepSignature.getStrike(), sweepSignature.startTime, sweepEndTs);
                 double cashAmount = calcCashAmount(trades);
                 if (qualifiesAsSweep(trades, cashAmount)) {
